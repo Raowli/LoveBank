@@ -1,91 +1,124 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>LoveBank Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #ff4d6d; --bg: #fff5f7; --husband: #4a90e2; --wife: #9b51e0; --danger: #ff4444; }
-        body { font-family: -apple-system, system-ui; background: var(--bg); margin: 0; padding: 15px; color: #333; padding-bottom: 80px; }
-        .card { background: white; padding: 20px; border-radius: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
-        .score { font-size: 54px; font-weight: bold; color: var(--primary); text-align: center; margin: 5px 0; }
-        
-        /* Stats Styles */
-        .stats-row { display: flex; justify-content: space-around; text-align: center; margin-top: 10px; }
-        .stat-box { flex: 1; }
-        .stat-val { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
-        .stat-lbl { font-size: 10px; color: #999; text-transform: uppercase; }
+        :root {
+            --primary: #ff4d6d;
+            --bg: #fffcfd;
+            --husband: #4a90e2;
+            --wife: #9b51e0;
+            --text: #2d3436;
+            --gray: #f1f2f6;
+        }
 
-        .calendar-bar { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        .day-pill { background: white; padding: 10px 15px; border-radius: 15px; min-width: 60px; text-align: center; border: 1px solid #eee; flex-shrink: 0; cursor: pointer; }
-        .day-pill.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
+        body { 
+            font-family: -apple-system, system-ui;
+            background: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: var(--text);
+            padding-bottom: 100px;
+        }
 
-        .user-selector { display: flex; gap: 10px; margin-bottom: 15px; }
-        .user-btn { flex: 1; padding: 12px; border-radius: 12px; border: 2px solid #eee; background: white; font-weight: bold; }
-        .user-btn.active.h { background: var(--husband); color: white; border-color: var(--husband); }
-        .user-btn.active.w { background: var(--wife); color: white; border-color: var(--wife); }
+        /* Startup Screen */
+        #startup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg); z-index: 1000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
 
-        input { width: 100%; padding: 15px; margin: 8px 0; border: 1px solid #eee; border-radius: 15px; box-sizing: border-box; font-size: 16px; outline: none; }
-        .manual-pts { display: flex; gap: 10px; margin-top: 5px; }
-        .pt-btn { flex: 1; padding: 12px 5px; border-radius: 12px; border: 1px solid var(--primary); color: var(--primary); background: white; font-weight: bold; }
+        /* Split Scoreboard */
+        .header-card {
+            background: white;
+            padding: 25px 15px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
 
-        .tabs { display: flex; background: #eee; border-radius: 20px; padding: 5px; margin-bottom: 15px; }
-        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 15px; cursor: pointer; font-weight: bold; color: #666; font-size: 14px; }
+        .score-box { text-align: center; flex: 1; }
+        .score-box.h { color: var(--husband); border-right: 1px solid var(--gray); }
+        .score-box.w { color: var(--wife); }
+        .score-val { font-size: 38px; font-weight: 800; display: block; }
+        .score-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #a4b0be; }
+
+        /* General UI */
+        .card { background: white; padding: 24px; border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.03); margin-bottom: 20px; }
+        .tabs { display: flex; background: var(--gray); border-radius: 20px; padding: 6px; margin-bottom: 25px; }
+        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 16px; cursor: pointer; font-weight: 700; font-size: 14px; color: #747d8c; }
         .tab.active { background: white; color: var(--primary); }
 
-        .log-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 18px; margin-bottom: 10px; border-left: 6px solid #eee; }
+        input { width: 100%; padding: 16px; margin: 10px 0; border: 2px solid var(--gray); border-radius: 18px; font-size: 16px; outline: none; box-sizing: border-box; }
+        .submit-btn { width: 100%; padding: 18px; border-radius: 18px; border: none; background: var(--primary); color: white; font-weight: 800; font-size: 16px; box-shadow: 0 6px 20px rgba(255, 77, 109, 0.2); }
+
+        .log-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 22px; margin-bottom: 12px; border-left: 8px solid var(--gray); }
         .log-item.h { border-left-color: var(--husband); }
         .log-item.w { border-left-color: var(--wife); }
         
-        .alert-banner { background: #ffe5ec; color: var(--primary); padding: 10px; border-radius: 15px; text-align: center; font-size: 12px; margin-bottom: 15px; font-weight: bold; cursor: pointer; }
         .hidden { display: none; }
+        .user-indicator { text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 10px; padding: 5px; border-radius: 10px; }
+        .user-indicator.h { background: #e3f2fd; color: var(--husband); }
+        .user-indicator.w { background: #f3e5f5; color: var(--wife); }
     </style>
 </head>
 <body>
 
-    <div id="notif-banner" class="alert-banner" onclick="enableNotifs()">🔔 Tap to Enable Partner Alerts</div>
+    <div id="startup-overlay">
+        <h2 style="color: var(--primary); margin-bottom: 30px;">Who are you?</h2>
+        <button class="submit-btn" style="background: var(--husband); margin-bottom: 15px; width: 80%;" onclick="selectUser('Husband')">Husband</button>
+        <button class="submit-btn" style="background: var(--wife); width: 80%;" onclick="selectUser('Wife')">Wife</button>
+    </div>
 
-    <div class="card">
-        <div style="text-align:center; font-size:11px; color:var(--primary); font-weight:bold;">TOTAL BALANCE</div>
-        <div id="balance" class="score">0</div>
-        
-        <div class="stats-row">
-            <div class="stat-box">
-                <span id="stat-week" class="stat-val">0</span>
-                <span class="stat-lbl">This Week</span>
-            </div>
-            <div class="stat-box" style="border-left: 1px solid #eee; border-right: 1px solid #eee;">
-                <span id="stat-month" class="stat-val">0</span>
-                <span class="stat-lbl">This Month</span>
-            </div>
+    <div class="header-card">
+        <div class="score-box h">
+            <span class="score-label">Husband</span>
+            <span id="score-h" class="score-val">0</span>
+        </div>
+        <div class="score-box w">
+            <span class="score-label">Wife</span>
+            <span id="score-w" class="score-val">0</span>
         </div>
     </div>
 
-    <div class="calendar-bar" id="calendar"></div>
+    <div id="current-user-tag" class="user-indicator"></div>
 
     <div class="tabs">
-        <div class="tab active" id="tab-acts" onclick="switchView('acts')">Activity</div>
-        <div class="tab" id="tab-shop" onclick="switchView('shop')">Rewards</div>
+        <div class="tab active" id="t-acts" onclick="switchV('acts')">Activity</div>
+        <div class="tab" id="t-shop" onclick="switchV('shop')">Shop</div>
+        <div class="tab" id="t-list" onclick="switchV('list')">Manage</div>
     </div>
 
-    <div id="view-acts">
+    <div id="v-acts">
         <div class="card">
-            <div class="user-selector">
-                <button id="btn-h" class="user-btn active h" onclick="setUser('Husband')">Husband</button>
-                <button id="btn-w" class="user-btn w" onclick="setUser('Wife')">Wife</button>
-            </div>
-            <input type="text" id="note" placeholder="What happened?">
-            <div class="manual-pts">
-                <input type="number" id="custom-pts" style="flex:1" placeholder="Pts">
-                <button class="pt-btn" onclick="addAct(null)" style="background:var(--primary); color:white">Save Act</button>
-            </div>
+            <input type="text" id="note" placeholder="What's the deed?">
+            <input type="number" id="custom-pts" placeholder="Points (e.g., 50)">
+            <button class="submit-btn" onclick="addAct()">Log to Vault</button>
         </div>
         <div id="logs"></div>
     </div>
 
-    <div id="view-shop" class="hidden">
-        <div class="card" onclick="redeem('Massage', 100)">🦶 Massage (100 pts)</div>
+    <div id="v-shop" class="hidden">
+        <div id="reward-shop-list"></div>
+    </div>
+
+    <div id="v-list" class="hidden">
+        <div class="card">
+            <h3 style="margin:0 0 10px 0">New Reward</h3>
+            <input type="text" id="rew-title" placeholder="Title">
+            <input type="number" id="rew-cost" placeholder="Cost">
+            <input type="text" id="rew-icon" placeholder="Emoji (🦶)">
+            <button class="submit-btn" onclick="addRewardToList()">Create Reward</button>
+        </div>
+        <div id="reward-edit-list"></div>
     </div>
 
     <script>
@@ -93,98 +126,106 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxY2V2amlvd2ZjZ2h0Y2puemV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODY3MzAsImV4cCI6MjA4MzM2MjczMH0.mkUS7Q8JMhFtJGFZ0_ceK7bVLdYyX9uMbPr3SBIWxBo';
         const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let currentUser = 'Husband';
-        let currentBalance = 0;
-        let selectedDay = new Date().toLocaleDateString();
-        let lastId = null;
+        let currentUser = null;
 
-        function enableNotifs() {
-            Notification.requestPermission().then(perm => {
-                if(perm === 'granted') document.getElementById('notif-banner').classList.add('hidden');
-            });
+        function selectUser(role) {
+            currentUser = role;
+            document.getElementById('startup-overlay').classList.add('hidden');
+            const tag = document.getElementById('current-user-tag');
+            tag.innerText = "Logged in as: " + role;
+            tag.className = "user-indicator " + (role === 'Husband' ? 'h' : 'w');
+            loadData();
         }
 
         async function loadData() {
-            const { data, error } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
-            if (error) return;
+            const { data: acts } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
+            const { data: rewards } = await sb.from('lovebank_rewards').select('*').order('cost', { ascending: true });
 
-            let total = 0, weekTotal = 0, monthTotal = 0, html = '';
-            const now = new Date();
-            const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            let hScore = 0, wScore = 0;
+            let logsHtml = '';
 
-            data.forEach((item, index) => {
-                const itemDate = new Date(item.created_at);
+            acts.forEach(item => {
+                const date = new Date(item.created_at);
                 if (item.status === 'approved') {
-                    total += item.points;
-                    if (itemDate >= startOfWeek) weekTotal += item.points;
-                    if (itemDate >= startOfMonth) monthTotal += item.points;
+                    if (item.user_type === 'Husband') hScore += item.points;
+                    else wScore += item.points;
                 }
-
-                // Alert logic: If the latest item is new and from the partner
-                if (index === 0 && lastId && item.id !== lastId && item.user_type !== currentUser) {
-                    new Notification("New Act Added!", { body: `${item.user_type} added: ${item.act} (${item.points} pts)` });
-                }
-                if (index === 0) lastId = item.id;
-
-                if (itemDate.toLocaleDateString() === selectedDay) {
-                    const userClass = item.user_type === 'Husband' ? 'h' : 'w';
-                    html += `<div class="log-item ${userClass}">
-                        <div><small>${itemDate.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} • ${item.user_type}</small><br><b>${item.act}</b></div>
-                        <div style="display:flex; align-items:center; gap:10px">
-                            ${item.status === 'pending' ? `<button class="pt-btn" onclick="approve('${item.id}')">Confirm</button>` : `<b>${item.points > 0 ? '+' : ''}${item.points}</b>`}
-                            <span onclick="deleteAct('${item.id}')">🗑️</span>
+                
+                const userClass = item.user_type === 'Husband' ? 'h' : 'w';
+                logsHtml += `
+                    <div class="log-item ${userClass}">
+                        <div>
+                            <span style="font-weight:700">${item.act}</span><br>
+                            <span style="font-size:11px; color:#a4b0be">${item.user_type} • ${date.toLocaleDateString()}</span>
+                        </div>
+                        <div style="display:flex; align-items:center">
+                            ${item.status === 'pending' 
+                                ? `<button class="approve-btn" onclick="approve('${item.id}')">Confirm</button>` 
+                                : `<span style="font-weight:800; color:${item.points >= 0 ? '#2ecc71' : '#e74c3c'}">${item.points >= 0 ? '+' : ''}${item.points}</span>`}
+                            <span style="margin-left:15px; opacity:0.3" onclick="delAct('${item.id}')">✕</span>
                         </div>
                     </div>`;
-                }
             });
 
-            document.getElementById('balance').innerText = total;
-            document.getElementById('stat-week').innerText = weekTotal;
-            document.getElementById('stat-month').innerText = monthTotal;
-            document.getElementById('logs').innerHTML = html || '<div style="text-align:center;color:#999;padding:20px;">No acts today</div>';
-            currentBalance = total;
+            document.getElementById('score-h').innerText = hScore;
+            document.getElementById('score-w').innerText = wScore;
+            document.getElementById('logs').innerHTML = logsHtml;
+
+            let shopHtml = '';
+            rewards.forEach(r => {
+                shopHtml += `
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center" onclick="redeem('${r.title}', ${r.cost})">
+                        <span>${r.icon} <b>${r.title}</b></span>
+                        <span style="color:var(--primary); font-weight:800">${r.cost} pts</span>
+                    </div>`;
+            });
+            document.getElementById('reward-shop-list').innerHTML = shopHtml;
+
+            let manageHtml = '';
+            rewards.forEach(r => {
+                manageHtml += `<div class="card" style="font-size:13px; opacity:0.7">${r.icon} ${r.title} (${r.cost}) <span style="color:red; float:right" onclick="delReward('${r.id}')">DEL</span></div>`;
+            });
+            document.getElementById('reward-edit-list').innerHTML = manageHtml;
         }
 
-        async function addAct(fixedPts) {
-            const pts = fixedPts || parseInt(document.getElementById('custom-pts').value);
+        async function addAct() {
+            const pts = parseInt(document.getElementById('custom-pts').value);
             const act = document.getElementById('note').value || "Good Deed";
             if(isNaN(pts)) return alert("Enter points!");
             await sb.from('lovebank').insert([{ act, points: pts, status: 'pending', user_type: currentUser }]);
-            document.getElementById('note').value = '';
-            document.getElementById('custom-pts').value = '';
+            document.getElementById('note').value = ''; document.getElementById('custom-pts').value = ''; 
+            loadData();
+        }
+
+        async function addRewardToList() {
+            const title = document.getElementById('rew-title').value;
+            const cost = parseInt(document.getElementById('rew-cost').value);
+            const icon = document.getElementById('rew-icon').value || '🎁';
+            await sb.from('lovebank_rewards').insert([{ title, cost, icon }]);
+            document.getElementById('rew-title').value = ''; document.getElementById('rew-cost').value = ''; 
             loadData();
         }
 
         async function approve(id) { await sb.from('lovebank').update({ status: 'approved' }).eq('id', id); loadData(); }
-        async function deleteAct(id) { if(confirm("Delete?")) { await sb.from('lovebank').delete().eq('id', id); loadData(); } }
-        
-        function setUser(u) { 
-            currentUser = u; 
-            document.getElementById('btn-h').classList.toggle('active', u === 'Husband');
-            document.getElementById('btn-w').classList.toggle('active', u === 'Wife');
+        async function delAct(id) { if(confirm("Delete?")) { await sb.from('lovebank').delete().eq('id', id); loadData(); } }
+        async function delReward(id) { if(confirm("Delete?")) { await sb.from('lovebank_rewards').delete().eq('id', id); loadData(); } }
+        async function redeem(title, cost) {
+            const myScore = currentUser === 'Husband' ? parseInt(document.getElementById('score-h').innerText) : parseInt(document.getElementById('score-w').innerText);
+            if (myScore < cost) return alert("Not enough points!");
+            if (confirm(`Redeem ${title}?`)) {
+                await sb.from('lovebank').insert([{ act: `REDEEMED: ${title}`, points: -cost, status: 'approved', user_type: currentUser }]);
+                loadData();
+            }
         }
 
-        function switchView(v) {
-            document.getElementById('view-acts').classList.toggle('hidden', v !== 'acts');
-            document.getElementById('view-shop').classList.toggle('hidden', v !== 'shop');
-            document.getElementById('tab-acts').classList.toggle('active', v === 'acts');
-            document.getElementById('tab-shop').classList.toggle('active', v === 'shop');
+        function switchV(v) {
+            ['v-acts','v-shop','v-list'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            document.getElementById('v-'+v).classList.remove('hidden');
+            ['t-acts','t-shop','t-list'].forEach(id => document.getElementById(id).classList.remove('active'));
+            document.getElementById('t-'+v).classList.add('active');
         }
 
-        // Init Calendar bar
-        const cal = document.getElementById('calendar');
-        for (let i = 0; i < 7; i++) {
-            const d = new Date(); d.setDate(d.getDate() - i);
-            const pill = document.createElement('div');
-            pill.className = `day-pill ${d.toLocaleDateString() === selectedDay ? 'active' : ''}`;
-            pill.innerHTML = `<span style="font-size:10px;display:block">${d.toLocaleDateString('en-US',{weekday:'short'})}</span>${d.getDate()}`;
-            pill.onclick = () => { selectedDay = d.toLocaleDateString(); loadData(); };
-            cal.appendChild(pill);
-        }
-
-        setInterval(loadData, 5000);
-        loadData();
+        setInterval(() => { if(currentUser) loadData(); }, 5000);
     </script>
 </body>
 </html>
