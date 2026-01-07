@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>LoveBank Pro v3.1</title>
+    <title>LoveBank Pro v3.2</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
@@ -26,14 +26,12 @@
             padding-bottom: 100px;
         }
 
-        /* v3.1 Identity Overlay */
         #startup-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: var(--bg); z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        /* Split Scoreboard Header */
         .header-card {
             background: white;
             padding: 25px 15px;
@@ -51,13 +49,11 @@
         .score-val { font-size: 38px; font-weight: 800; display: block; }
         .score-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #a4b0be; }
 
-        /* Stats & Analytics */
         .stats-row { display: flex; justify-content: space-around; background: var(--gray); padding: 10px; border-radius: 15px; margin-bottom: 20px; }
         .stat-item { text-align: center; }
         .stat-n { display: block; font-weight: 800; font-size: 14px; color: var(--primary); }
         .stat-l { font-size: 9px; text-transform: uppercase; color: #a4b0be; }
 
-        /* Calendar Day Selector */
         .calendar-bar { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
         .day-pill { background: white; padding: 10px 15px; border-radius: 15px; min-width: 50px; text-align: center; border: 1px solid #eee; flex-shrink: 0; cursor: pointer; }
         .day-pill.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
@@ -78,6 +74,9 @@
         .user-tag { text-align: center; font-size: 11px; font-weight: 700; margin-bottom: 15px; padding: 8px; border-radius: 10px; }
         .user-tag.h { background: #e3f2fd; color: var(--husband); }
         .user-tag.w { background: #f3e5f5; color: var(--wife); }
+
+        /* Manage List Style */
+        .manage-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--gray); font-size: 14px; }
     </style>
 </head>
 <body>
@@ -94,8 +93,8 @@
     </div>
 
     <div class="stats-row">
-        <div class="stat-item"><span id="stat-week" class="stat-n">0</span><span class="stat-l">This Week</span></div>
-        <div class="stat-item"><span id="stat-month" class="stat-n">0</span><span class="stat-l">This Month</span></div>
+        <div class="stat-item"><span id="stat-week" class="stat-n">0</span><span class="stat-l">Weekly Sum</span></div>
+        <div class="stat-item"><span id="stat-month" class="stat-n">0</span><span class="stat-l">Monthly Sum</span></div>
     </div>
 
     <div class="calendar-bar" id="calendar"></div>
@@ -117,14 +116,17 @@
         <div id="logs"></div>
     </div>
 
-    <div id="v-shop" class="hidden"><div id="reward-shop-list"></div></div>
+    <div id="v-shop" class="hidden">
+        <div id="reward-shop-list"></div>
+    </div>
     
     <div id="v-list" class="hidden">
         <div class="card">
-            <input type="text" id="rew-title" placeholder="Reward Name">
-            <input type="number" id="rew-cost" placeholder="Points Required">
-            <input type="text" id="rew-icon" placeholder="Emoji Icon">
-            <button class="submit-btn" onclick="addRewardToList()">Add Reward</button>
+            <h3 style="margin:0 0 10px 0; font-size: 16px;">Create New Reward</h3>
+            <input type="text" id="rew-title" placeholder="Reward Name (e.g. Foot Massage)">
+            <input type="number" id="rew-cost" placeholder="Points Cost (e.g. 100)">
+            <input type="text" id="rew-icon" placeholder="Emoji (e.g. 🦶)">
+            <button class="submit-btn" onclick="addRewardToList()">Save Reward</button>
         </div>
         <div id="reward-edit-list"></div>
     </div>
@@ -169,8 +171,10 @@
         }
 
         async function loadData() {
-            const { data: acts } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
-            const { data: rewards } = await sb.from('lovebank_rewards').select('*').order('cost', { ascending: true });
+            const { data: acts, error: aErr } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
+            const { data: rewards, error: rErr } = await sb.from('lovebank_rewards').select('*').order('cost', { ascending: true });
+
+            if(aErr || rErr) return console.error("Sync Error");
 
             let hScore = 0, wScore = 0, week = 0, month = 0;
             const now = new Date();
@@ -188,7 +192,6 @@
                     if (d >= startM) month += item.points;
                 }
                 
-                // Calendar filtering
                 if (d.toLocaleDateString() === selectedDay) {
                     logsHtml += `<div class="log-item ${item.user_type === 'Husband' ? 'h' : 'w'}">
                         <div><small>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} • ${item.user_type}</small><br><b>${item.act}</b></div>
@@ -204,53 +207,80 @@
             document.getElementById('score-w').innerText = wScore;
             document.getElementById('stat-week').innerText = week;
             document.getElementById('stat-month').innerText = month;
-            document.getElementById('logs').innerHTML = logsHtml || '<div style="text-align:center;padding:20px;color:#ccc">No activity today</div>';
+            document.getElementById('logs').innerHTML = logsHtml || '<div style="text-align:center;padding:20px;color:#ccc">No entries</div>';
 
+            // Update Shop
             let sHtml = '';
-            rewards.forEach(r => {
-                sHtml += `<div class="card" style="display:flex;justify-content:space-between;align-items:center" onclick="redeem('${r.title}',${r.cost})">
-                    <span>${r.icon} <b>${r.title}</b></span><span style="color:var(--primary);font-weight:800">${r.cost} pts</span>
-                </div>`;
-            });
-            document.getElementById('reward-shop-list').innerHTML = sHtml;
+            if (rewards) {
+                rewards.forEach(r => {
+                    sHtml += `<div class="card" style="display:flex;justify-content:space-between;align-items:center" onclick="redeem('${r.title}',${r.cost})">
+                        <span>${r.icon} <b>${r.title}</b></span><span style="color:var(--primary);font-weight:800">${r.cost} pts</span>
+                    </div>`;
+                });
+            }
+            document.getElementById('reward-shop-list').innerHTML = sHtml || '<div style="text-align:center;padding:20px;color:#ccc">Shop is empty</div>';
 
+            // Update Management List
             let mHtml = '';
-            rewards.forEach(r => {
-                mHtml += `<div class="card" style="font-size:12px;opacity:0.6">${r.icon} ${r.title} (${r.cost}) <span style="color:red;float:right" onclick="delReward('${r.id}')">DEL</span></div>`;
-            });
+            if (rewards) {
+                rewards.forEach(r => {
+                    mHtml += `<div class="manage-item">
+                        <span>${r.icon} ${r.title} (${r.cost} pts)</span>
+                        <span style="color:red; cursor:pointer" onclick="delReward('${r.id}')">Delete</span>
+                    </div>`;
+                });
+            }
             document.getElementById('reward-edit-list').innerHTML = mHtml;
+        }
+
+        async function addRewardToList() {
+            const t = document.getElementById('rew-title').value.trim();
+            const cStr = document.getElementById('rew-cost').value;
+            const c = parseInt(cStr);
+            const i = document.getElementById('rew-icon').value.trim() || '🎁';
+
+            if(!t || isNaN(c)) {
+                alert("Please fill in Name and Cost!");
+                return;
+            }
+
+            const { error } = await sb.from('lovebank_rewards').insert([{ title: t, cost: c, icon: i }]);
+            
+            if(error) {
+                alert("Database Error: " + error.message);
+            } else {
+                // Clear inputs
+                document.getElementById('rew-title').value = '';
+                document.getElementById('rew-cost').value = '';
+                document.getElementById('rew-icon').value = '';
+                // Refresh data
+                await loadData();
+                alert("Reward Added Successfully!");
+            }
         }
 
         async function addAct() {
             const ptsVal = document.getElementById('custom-pts').value;
             const pts = parseInt(ptsVal);
             const act = document.getElementById('note').value || "Act";
-            if(isNaN(pts)) return alert("Please enter points");
+            if(isNaN(pts)) return alert("Please enter points!");
             
             const { error } = await sb.from('lovebank').insert([{ act, points: pts, status: 'pending', user_type: currentUser }]);
-            if(error) alert("Database Error: " + error.message);
+            if(error) alert("Error: " + error.message);
             
             document.getElementById('note').value = ''; 
             document.getElementById('custom-pts').value = ''; 
             loadData();
         }
 
-        async function addRewardToList() {
-            const t = document.getElementById('rew-title').value;
-            const c = parseInt(document.getElementById('rew-cost').value);
-            const i = document.getElementById('rew-icon').value || '🎁';
-            await sb.from('lovebank_rewards').insert([{ title: t, cost: c, icon: i }]);
-            loadData();
-        }
-
         async function approve(id) { await sb.from('lovebank').update({ status: 'approved' }).eq('id', id); loadData(); }
         async function delAct(id) { if(confirm("Delete entry?")) { await sb.from('lovebank').delete().eq('id', id); loadData(); } }
-        async function delReward(id) { if(confirm("Delete reward?")) { await sb.from('lovebank_rewards').delete().eq('id', id); loadData(); } }
+        async function delReward(id) { if(confirm("Permanently remove this reward?")) { await sb.from('lovebank_rewards').delete().eq('id', id); loadData(); } }
         async function redeem(t, c) {
             const h = parseInt(document.getElementById('score-h').innerText);
             const w = parseInt(document.getElementById('score-w').innerText);
             const score = currentUser === 'Husband' ? h : w;
-            if(score < c) return alert("Insufficient points");
+            if(score < c) return alert("Not enough points!");
             if(confirm(`Spend ${c} pts on ${t}?`)) {
                 await sb.from('lovebank').insert([{ act: `REDEEMED: ${t}`, points: -c, status: 'approved', user_type: currentUser }]);
                 loadData();
