@@ -12,7 +12,7 @@
         .score { font-size: 54px; font-weight: bold; color: var(--primary); text-align: center; margin: 5px 0; }
         
         /* Calendar Bar */
-        .calendar-bar { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+        .calendar-bar { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px 0; scrollbar-width: none; }
         .day-pill { background: white; padding: 10px 15px; border-radius: 15px; min-width: 60px; text-align: center; border: 1px solid #eee; flex-shrink: 0; cursor: pointer; }
         .day-pill.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
         .day-name { font-size: 10px; text-transform: uppercase; display: block; }
@@ -22,10 +22,7 @@
         .user-btn.active.h { background: var(--husband); color: white; border-color: var(--husband); }
         .user-btn.active.w { background: var(--wife); color: white; border-color: var(--wife); }
 
-        input { width: 100%; padding: 15px; margin: 8px 0; border: 1px solid #eee; border-radius: 15px; box-sizing: border-box; font-size: 16px; outline: none; }
-        .manual-pts { display: flex; gap: 10px; align-items: center; margin-top: 5px; }
-        .pts-input { flex: 1; text-align: center; }
-
+        input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #eee; border-radius: 15px; box-sizing: border-box; font-size: 16px; outline: none; }
         .point-grid { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
         .pt-btn { flex: 1; padding: 12px 5px; border-radius: 12px; border: 1px solid var(--primary); color: var(--primary); background: white; font-weight: bold; cursor: pointer; }
 
@@ -40,6 +37,7 @@
         .item-actions { display: flex; align-items: center; gap: 12px; }
         .approve-btn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 10px; font-weight: bold; font-size: 12px; cursor: pointer; }
         .delete-btn { font-size: 18px; border: none; background: none; cursor: pointer; opacity: 0.3; }
+        .delete-btn:hover { opacity: 1; }
         
         .hidden { display: none; }
     </style>
@@ -51,7 +49,8 @@
         <div id="balance" class="score">0</div>
     </div>
 
-    <div class="calendar-bar" id="calendar"></div>
+    <div class="calendar-bar" id="calendar">
+        </div>
 
     <div class="tabs">
         <div class="tab active" id="tab-acts" onclick="switchView('acts')">Activity</div>
@@ -64,19 +63,12 @@
                 <button id="btn-h" class="user-btn active h" onclick="setUser('Husband')">Husband</button>
                 <button id="btn-w" class="user-btn w" onclick="setUser('Wife')">Wife</button>
             </div>
-            
             <input type="text" id="note" placeholder="What's the deed?">
-            
-            <div class="manual-pts">
-                <input type="number" id="custom-pts" class="pts-input" placeholder="Custom Pts (e.g. 75)">
-                <button class="pt-btn" onclick="addCustomAct()">Add Custom</button>
-            </div>
-
-            <div style="text-align: center; font-size: 10px; color: #bbb; margin-top: 10px;">- OR QUICK SELECT -</div>
-            
             <div class="point-grid">
                 <button class="pt-btn" onclick="addAct(50)">+50</button>
                 <button class="pt-btn" onclick="addAct(100)">+100</button>
+                <button class="pt-btn" onclick="addAct(50)">+500</button>
+                <button class="pt-btn" onclick="addAct(50)">+1000</button>
                 <button class="pt-btn" style="color:var(--danger); border-color:var(--danger)" onclick="addAct(-50)">-50</button>
                 <button class="pt-btn" style="color:var(--danger); border-color:var(--danger)" onclick="addAct(-100)">-100</button>
             </div>
@@ -108,9 +100,9 @@
         let currentBalance = 0;
         let selectedDay = new Date().toLocaleDateString();
 
+        // 1. GENERATE CALENDAR BAR
         function initCalendar() {
             const cal = document.getElementById('calendar');
-            cal.innerHTML = '';
             for (let i = 0; i < 7; i++) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
@@ -150,6 +142,8 @@
             
             data.forEach(item => {
                 if (item.status === 'approved') total += item.points;
+                
+                // Only show items for the selected day in the UI
                 const itemDate = new Date(item.created_at).toLocaleDateString();
                 if (itemDate === selectedDay) {
                     const userClass = item.user_type === 'Husband' ? 'h' : 'w';
@@ -166,6 +160,7 @@
                                 <button class="delete-btn" onclick="deleteAct('${item.id}')">🗑️</button>
                             </div>
                         </div>`;
+                }
             });
             
             currentBalance = total;
@@ -177,17 +172,7 @@
             const act = document.getElementById('note').value || "Entry";
             await sb.from('lovebank').insert([{ act, points: pts, status: 'pending', user_type: currentUser }]);
             document.getElementById('note').value = '';
-            document.getElementById('custom-pts').value = '';
             loadData();
-        }
-
-        async function addCustomAct() {
-            const customVal = parseInt(document.getElementById('custom-pts').value);
-            if (isNaN(customVal)) {
-                alert("Please enter a valid number!");
-                return;
-            }
-            addAct(customVal);
         }
 
         async function approve(id) {
