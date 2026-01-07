@@ -2,77 +2,167 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>LoveBank</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>LoveBank 2026</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: -apple-system, system-ui; background: #fff5f7; margin: 0; padding: 20px; color: #333; }
-        .card { background: white; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
-        .score { font-size: 48px; font-weight: bold; color: #ff4d6d; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #eee; border-radius: 10px; box-sizing: border-box; }
-        .btn { padding: 15px; border-radius: 10px; border: none; color: white; font-weight: bold; width: 48%; cursor: pointer; }
-        .pos { background: #4caf50; } .neg { background: #f44336; }
-        .log-item { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding: 10px 0; }
-        .approve-btn { background: #ff4d6d; color: white; border: none; padding: 5px 10px; border-radius: 5px; }
+        :root { --primary: #ff4d6d; --secondary: #ff85a1; --bg: #fff5f7; --husband: #4a90e2; --wife: #9b51e0; }
+        body { font-family: -apple-system, system-ui; background: var(--bg); margin: 0; padding: 15px; color: #333; padding-bottom: 80px; }
+        .card { background: white; padding: 20px; border-radius: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 15px; }
+        .score { font-size: 54px; font-weight: bold; color: var(--primary); text-align: center; margin: 10px 0; }
+        
+        /* User Toggle */
+        .user-selector { display: flex; gap: 10px; margin-bottom: 15px; }
+        .user-btn { flex: 1; padding: 10px; border-radius: 12px; border: 2px solid #eee; background: white; cursor: pointer; font-weight: bold; }
+        .user-btn.active.h { background: var(--husband); color: white; border-color: var(--husband); }
+        .user-btn.active.w { background: var(--wife); color: white; border-color: var(--wife); }
+
+        /* Inputs */
+        input { width: 100%; padding: 15px; margin: 10px 0; border: 1px solid #eee; border-radius: 15px; box-sizing: border-box; font-size: 16px; }
+        .point-grid { display: flex; justify-content: space-between; gap: 5px; margin-top: 10px; }
+        .pt-btn { flex: 1; padding: 12px 5px; border-radius: 10px; border: 1px solid var(--primary); color: var(--primary); background: white; font-weight: bold; }
+
+        /* Tabs */
+        .tabs { display: flex; background: #eee; border-radius: 15px; padding: 5px; margin-bottom: 15px; }
+        .tab { flex: 1; text-align: center; padding: 10px; border-radius: 10px; cursor: pointer; font-weight: bold; color: #666; }
+        .tab.active { background: white; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+        /* Logs */
+        .log-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 15px; margin-bottom: 10px; border-left: 5px solid #eee; }
+        .log-item.h { border-left-color: var(--husband); }
+        .log-item.w { border-left-color: var(--wife); }
+        .approve-btn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; }
+        
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <div style="text-align:center; font-size:12px; color:#ff4d6d">SHARED BALANCE</div>
+        <div style="text-align:center; font-size:12px; color:var(--primary); font-weight:bold">CURRENT BALANCE</div>
         <div id="balance" class="score">0</div>
     </div>
 
-    <div class="card">
-        <input type="text" id="note" placeholder="What happened?">
-        <div style="display:flex; justify-content:space-between">
-            <button class="btn pos" onclick="addAct(50)">+ Good</button>
-            <button class="btn neg" onclick="addAct(-50)">- Slip</button>
-        </div>
+    <div class="tabs">
+        <div class="tab active" id="tab-acts" onclick="switchView('acts')">Log Act</div>
+        <div class="tab" id="tab-shop" onclick="switchView('shop')">Rewards</div>
     </div>
 
-    <div id="logs"></div>
+    <div id="view-acts">
+        <div class="card">
+            <div class="user-selector">
+                <button id="btn-h" class="user-btn active h" onclick="setUser('Husband')">Husband</button>
+                <button id="btn-w" class="user-btn w" onclick="setUser('Wife')">Wife</button>
+            </div>
+            <input type="text" id="note" placeholder="What happened?">
+            <div style="text-align: center; font-size: 12px; color: #999; margin-top: 10px;">Select Point Value to Save:</div>
+            <div class="point-grid">
+                <button class="pt-btn" onclick="addAct(50)">+50</button>
+                <button class="pt-btn" onclick="addAct(100)">+100</button>
+                <button class="pt-btn" style="color:red; border-color:red" onclick="addAct(-50)">-50</button>
+                <button class="pt-btn" style="color:red; border-color:red" onclick="addAct(-100)">-100</button>
+            </div>
+        </div>
+        <div id="logs"></div>
+    </div>
+
+    <div id="view-shop" class="hidden">
+        <div class="card" onclick="redeem('Foot Massage', 100)">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <span>🦶 <b>Foot Massage</b></span>
+                <span style="color:var(--primary)">100 pts</span>
+            </div>
+        </div>
+        <div class="card" onclick="redeem('Dinner Choice', 500)">
+            <div style="display:flex; justify-content:space-between; align-items:center">
+                <span>🍴 <b>Winner Picks Dinner</b></span>
+                <span style="color:var(--primary)">500 pts</span>
+            </div>
+        </div>
+    </div>
 
     <script>
         const SUPABASE_URL = 'https://zqcevjiowfcghtcjnzex.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxY2V2amlvd2ZjZ2h0Y2puemV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODY3MzAsImV4cCI6MjA4MzM2MjczMH0.mkUS7Q8JMhFtJGFZ0_ceK7bVLdYyX9uMbPr3SBIWxBo';
-        const supabaseInstance = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let currentUser = 'Husband';
+        let currentBalance = 0;
+
+        function setUser(u) {
+            currentUser = u;
+            document.getElementById('btn-h').classList.toggle('active', u === 'Husband');
+            document.getElementById('btn-w').classList.toggle('active', u === 'Wife');
+        }
+
+        function switchView(v) {
+            document.getElementById('view-acts').classList.toggle('hidden', v !== 'acts');
+            document.getElementById('view-shop').classList.toggle('hidden', v !== 'shop');
+            document.getElementById('tab-acts').classList.toggle('active', v === 'acts');
+            document.getElementById('tab-shop').classList.toggle('active', v === 'shop');
+        }
 
         async function loadData() {
-            const { data, error } = await supabaseInstance.from('lovebank').select('*').order('created_at', { ascending: false });
-            if (error) return console.log(error);
+            const { data, error } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
+            if (error) return;
             
             let total = 0;
             let html = '';
             
             data.forEach(item => {
                 if (item.status === 'approved') total += item.points;
+                const userClass = item.user_type === 'Husband' ? 'h' : 'w';
+                
                 html += `
-                    <div class="log-item">
+                    <div class="log-item ${userClass}">
                         <div>
-                            <b>${item.act}</b><br><small>${new Date(item.created_at).toLocaleTimeString()}</small>
+                            <small style="color:#999">${item.user_type || 'Unknown'}</small><br>
+                            <b>${item.act}</b>
                         </div>
                         <div>
                             ${item.status === 'pending' 
                                 ? `<button class="approve-btn" onclick="approve('${item.id}')">Confirm ${item.points}</button>` 
-                                : `<b>${item.points > 0 ? '+' : ''}${item.points}</b>`}
+                                : `<b style="color:${item.points > 0 ? '#4caf50' : '#f44336'}">${item.points > 0 ? '+' : ''}${item.points}</b>`}
                         </div>
                     </div>`;
             });
             
+            currentBalance = total;
             document.getElementById('balance').innerText = total;
             document.getElementById('logs').innerHTML = html;
         }
 
         async function addAct(pts) {
-            const act = document.getElementById('note').value || "Manual Entry";
-            await supabaseInstance.from('lovebank').insert([{ act, points: pts, status: 'pending' }]);
+            const act = document.getElementById('note').value || "Good Deed";
+            await sb.from('lovebank').insert([{ 
+                act: act, 
+                points: pts, 
+                status: 'pending',
+                user_type: currentUser 
+            }]);
             document.getElementById('note').value = '';
             loadData();
         }
 
         async function approve(id) {
-            await supabaseInstance.from('lovebank').update({ status: 'approved' }).eq('id', id);
+            await sb.from('lovebank').update({ status: 'approved' }).eq('id', id);
             loadData();
+        }
+
+        async function redeem(title, cost) {
+            if (currentBalance < cost) {
+                alert("Not enough points yet!");
+                return;
+            }
+            if (confirm(`Redeem ${title} for ${cost} pts?`)) {
+                await sb.from('lovebank').insert([{ 
+                    act: `REDEEMED: ${title}`, 
+                    points: -cost, 
+                    status: 'approved',
+                    user_type: currentUser 
+                }]);
+                loadData();
+            }
         }
 
         setInterval(loadData, 5000);
