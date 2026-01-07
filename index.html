@@ -5,16 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>LoveBank Pro v3.2</title>
+    <title>LoveBank Pro v3.3</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #ff4d6d;
             --bg: #fffcfd;
+            --card: #ffffff;
             --husband: #4a90e2;
             --wife: #9b51e0;
             --text: #2d3436;
             --gray: #f1f2f6;
+            --subtext: #a4b0be;
+        }
+
+        /* Dark Mode Variable Overrides */
+        body.dark-theme {
+            --bg: #121212;
+            --card: #1e1e1e;
+            --text: #ffffff;
+            --gray: #2d2d2d;
+            --subtext: #888888;
         }
 
         body { 
@@ -24,6 +35,15 @@
             padding: 15px;
             color: var(--text);
             padding-bottom: 100px;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* Theme Toggle Button */
+        .theme-toggle {
+            position: absolute; top: 20px; right: 20px;
+            background: var(--gray); border: none; padding: 10px;
+            border-radius: 50%; cursor: pointer; font-size: 18px;
+            z-index: 10001;
         }
 
         #startup-overlay {
@@ -33,7 +53,7 @@
         }
 
         .header-card {
-            background: white;
+            background: var(--card);
             padding: 25px 15px;
             border-radius: 30px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
@@ -47,44 +67,44 @@
         .score-box.h { color: var(--husband); border-right: 1px solid var(--gray); }
         .score-box.w { color: var(--wife); }
         .score-val { font-size: 38px; font-weight: 800; display: block; }
-        .score-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #a4b0be; }
+        .score-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--subtext); }
 
         .stats-row { display: flex; justify-content: space-around; background: var(--gray); padding: 10px; border-radius: 15px; margin-bottom: 20px; }
         .stat-item { text-align: center; }
         .stat-n { display: block; font-weight: 800; font-size: 14px; color: var(--primary); }
-        .stat-l { font-size: 9px; text-transform: uppercase; color: #a4b0be; }
+        .stat-l { font-size: 9px; text-transform: uppercase; color: var(--subtext); }
 
         .calendar-bar { display: flex; gap: 8px; overflow-x: auto; padding: 5px 0 15px 0; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
-        .day-pill { background: white; padding: 10px 15px; border-radius: 15px; min-width: 50px; text-align: center; border: 1px solid #eee; flex-shrink: 0; cursor: pointer; }
+        .day-pill { background: var(--card); padding: 10px 15px; border-radius: 15px; min-width: 50px; text-align: center; border: 1px solid var(--gray); flex-shrink: 0; cursor: pointer; color: var(--text); }
         .day-pill.active { background: var(--primary); color: white; border-color: var(--primary); font-weight: bold; }
 
-        .card { background: white; padding: 20px; border-radius: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.03); margin-bottom: 15px; }
+        .card { background: var(--card); padding: 20px; border-radius: 25px; box-shadow: 0 8px 24px rgba(0,0,0,0.03); margin-bottom: 15px; }
         .tabs { display: flex; background: var(--gray); border-radius: 20px; padding: 5px; margin-bottom: 20px; }
-        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 15px; cursor: pointer; font-weight: 700; font-size: 13px; color: #747d8c; }
-        .tab.active { background: white; color: var(--primary); }
+        .tab { flex: 1; text-align: center; padding: 12px; border-radius: 15px; cursor: pointer; font-weight: 700; font-size: 13px; color: var(--subtext); }
+        .tab.active { background: var(--card); color: var(--primary); }
 
-        input { width: 100%; padding: 15px; margin: 8px 0; border: 2px solid var(--gray); border-radius: 15px; font-size: 16px; outline: none; box-sizing: border-box; }
+        input { width: 100%; padding: 15px; margin: 8px 0; border: 2px solid var(--gray); border-radius: 15px; font-size: 16px; outline: none; box-sizing: border-box; background: var(--card); color: var(--text); }
         .submit-btn { width: 100%; padding: 15px; border-radius: 15px; border: none; background: var(--primary); color: white; font-weight: 800; font-size: 16px; cursor: pointer; }
 
-        .log-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 20px; margin-bottom: 10px; border-left: 6px solid var(--gray); }
+        .log-item { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 15px; border-radius: 20px; margin-bottom: 10px; border-left: 6px solid var(--gray); }
         .log-item.h { border-left-color: var(--husband); }
         .log-item.w { border-left-color: var(--wife); }
         
         .hidden { display: none !important; }
         .user-tag { text-align: center; font-size: 11px; font-weight: 700; margin-bottom: 15px; padding: 8px; border-radius: 10px; }
-        .user-tag.h { background: #e3f2fd; color: var(--husband); }
-        .user-tag.w { background: #f3e5f5; color: var(--wife); }
-
-        /* Manage List Style */
+        .user-tag.h { background: rgba(74, 144, 226, 0.1); color: var(--husband); }
+        .user-tag.w { background: rgba(155, 81, 224, 0.1); color: var(--wife); }
         .manage-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--gray); font-size: 14px; }
     </style>
 </head>
-<body>
+<body id="main-body">
+
+    <button class="theme-toggle" id="mode-btn" onclick="toggleTheme()">🌙</button>
 
     <div id="startup-overlay">
         <h2 style="color: var(--primary); font-weight: 800;">Welcome Home</h2>
-        <button class="submit-btn" style="background: var(--husband); margin-bottom: 15px; width: 80%;" onclick="selectUser('Husband')">Husband Entry</button>
-        <button class="submit-btn" style="background: var(--wife); width: 80%;" onclick="selectUser('Wife')">Wife Entry</button>
+        <button class="submit-btn" style="background: var(--husband); margin-bottom: 15px; width: 80%;" onclick="selectUser('Husband')">Husband</button>
+        <button class="submit-btn" style="background: var(--wife); width: 80%;" onclick="selectUser('Wife')">Wife</button>
     </div>
 
     <div class="header-card">
@@ -93,40 +113,35 @@
     </div>
 
     <div class="stats-row">
-        <div class="stat-item"><span id="stat-week" class="stat-n">0</span><span class="stat-l">Weekly Sum</span></div>
-        <div class="stat-item"><span id="stat-month" class="stat-n">0</span><span class="stat-l">Monthly Sum</span></div>
+        <div class="stat-item"><span id="stat-week" class="stat-n">0</span><span class="stat-l">Weekly</span></div>
+        <div class="stat-item"><span id="stat-month" class="stat-n">0</span><span class="stat-l">Monthly</span></div>
     </div>
 
     <div class="calendar-bar" id="calendar"></div>
-
     <div id="current-user-tag" class="user-tag"></div>
 
     <div class="tabs">
-        <div class="tab active" id="t-acts" onclick="switchV('acts')">Activity</div>
+        <div class="tab active" id="t-acts" onclick="switchV('acts')">Acts</div>
         <div class="tab" id="t-shop" onclick="switchV('shop')">Shop</div>
         <div class="tab" id="t-list" onclick="switchV('list')">Manage</div>
     </div>
 
     <div id="v-acts">
         <div class="card">
-            <input type="text" id="note" placeholder="Describe the act...">
-            <input type="number" id="custom-pts" placeholder="Points (e.g. 50)">
-            <button class="submit-btn" onclick="addAct()">Log to Vault</button>
+            <input type="text" id="note" placeholder="What happened?">
+            <input type="number" id="custom-pts" placeholder="Points">
+            <button class="submit-btn" onclick="addAct()">Log Entry</button>
         </div>
         <div id="logs"></div>
     </div>
 
-    <div id="v-shop" class="hidden">
-        <div id="reward-shop-list"></div>
-    </div>
-    
+    <div id="v-shop" class="hidden"><div id="reward-shop-list"></div></div>
     <div id="v-list" class="hidden">
         <div class="card">
-            <h3 style="margin:0 0 10px 0; font-size: 16px;">Create New Reward</h3>
-            <input type="text" id="rew-title" placeholder="Reward Name (e.g. Foot Massage)">
-            <input type="number" id="rew-cost" placeholder="Points Cost (e.g. 100)">
-            <input type="text" id="rew-icon" placeholder="Emoji (e.g. 🦶)">
-            <button class="submit-btn" onclick="addRewardToList()">Save Reward</button>
+            <input type="text" id="rew-title" placeholder="Reward Name">
+            <input type="number" id="rew-cost" placeholder="Cost">
+            <input type="text" id="rew-icon" placeholder="Emoji (🦶)">
+            <button class="submit-btn" onclick="addRewardToList()">Create Reward</button>
         </div>
         <div id="reward-edit-list"></div>
     </div>
@@ -139,13 +154,21 @@
         let currentUser = null;
         let selectedDay = new Date().toLocaleDateString();
 
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark-theme');
+            document.getElementById('mode-btn').innerText = isDark ? '☀️' : '🌙';
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        // Apply saved theme on load
+        if (localStorage.getItem('theme') === 'dark') toggleTheme();
+
         function selectUser(role) {
             currentUser = role;
             document.getElementById('startup-overlay').style.display = 'none';
             const tag = document.getElementById('current-user-tag');
             tag.innerText = "Logged in as: " + role;
             tag.className = "user-tag " + (role === 'Husband' ? 'h' : 'w');
-            
             initCalendar();
             loadData();
             setInterval(() => { if(currentUser) loadData(); }, 5000);
@@ -171,10 +194,8 @@
         }
 
         async function loadData() {
-            const { data: acts, error: aErr } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
-            const { data: rewards, error: rErr } = await sb.from('lovebank_rewards').select('*').order('cost', { ascending: true });
-
-            if(aErr || rErr) return console.error("Sync Error");
+            const { data: acts } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
+            const { data: rewards } = await sb.from('lovebank_rewards').select('*').order('cost', { ascending: true });
 
             let hScore = 0, wScore = 0, week = 0, month = 0;
             const now = new Date();
@@ -187,11 +208,9 @@
                 if (item.status === 'approved') {
                     if (item.user_type === 'Husband') hScore += item.points;
                     else wScore += item.points;
-                    
                     if (d >= startW) week += item.points;
                     if (d >= startM) month += item.points;
                 }
-                
                 if (d.toLocaleDateString() === selectedDay) {
                     logsHtml += `<div class="log-item ${item.user_type === 'Husband' ? 'h' : 'w'}">
                         <div><small>${d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})} • ${item.user_type}</small><br><b>${item.act}</b></div>
@@ -207,81 +226,49 @@
             document.getElementById('score-w').innerText = wScore;
             document.getElementById('stat-week').innerText = week;
             document.getElementById('stat-month').innerText = month;
-            document.getElementById('logs').innerHTML = logsHtml || '<div style="text-align:center;padding:20px;color:#ccc">No entries</div>';
+            document.getElementById('logs').innerHTML = logsHtml || '<div style="text-align:center;padding:20px;color:var(--subtext)">No entries</div>';
 
-            // Update Shop
             let sHtml = '';
-            if (rewards) {
-                rewards.forEach(r => {
-                    sHtml += `<div class="card" style="display:flex;justify-content:space-between;align-items:center" onclick="redeem('${r.title}',${r.cost})">
-                        <span>${r.icon} <b>${r.title}</b></span><span style="color:var(--primary);font-weight:800">${r.cost} pts</span>
-                    </div>`;
-                });
-            }
-            document.getElementById('reward-shop-list').innerHTML = sHtml || '<div style="text-align:center;padding:20px;color:#ccc">Shop is empty</div>';
+            rewards.forEach(r => {
+                sHtml += `<div class="card" style="display:flex;justify-content:space-between;align-items:center" onclick="redeem('${r.title}',${r.cost})">
+                    <span>${r.icon} <b>${r.title}</b></span><span style="color:var(--primary);font-weight:800">${r.cost} pts</span>
+                </div>`;
+            });
+            document.getElementById('reward-shop-list').innerHTML = sHtml;
 
-            // Update Management List
             let mHtml = '';
-            if (rewards) {
-                rewards.forEach(r => {
-                    mHtml += `<div class="manage-item">
-                        <span>${r.icon} ${r.title} (${r.cost} pts)</span>
-                        <span style="color:red; cursor:pointer" onclick="delReward('${r.id}')">Delete</span>
-                    </div>`;
-                });
-            }
+            rewards.forEach(r => {
+                mHtml += `<div class="manage-item"><span>${r.icon} ${r.title} (${r.cost})</span><span style="color:red" onclick="delReward('${r.id}')">Delete</span></div>`;
+            });
             document.getElementById('reward-edit-list').innerHTML = mHtml;
         }
 
-        async function addRewardToList() {
-            const t = document.getElementById('rew-title').value.trim();
-            const cStr = document.getElementById('rew-cost').value;
-            const c = parseInt(cStr);
-            const i = document.getElementById('rew-icon').value.trim() || '🎁';
-
-            if(!t || isNaN(c)) {
-                alert("Please fill in Name and Cost!");
-                return;
-            }
-
-            const { error } = await sb.from('lovebank_rewards').insert([{ title: t, cost: c, icon: i }]);
-            
-            if(error) {
-                alert("Database Error: " + error.message);
-            } else {
-                // Clear inputs
-                document.getElementById('rew-title').value = '';
-                document.getElementById('rew-cost').value = '';
-                document.getElementById('rew-icon').value = '';
-                // Refresh data
-                await loadData();
-                alert("Reward Added Successfully!");
-            }
+        async function addAct() {
+            const pts = parseInt(document.getElementById('custom-pts').value);
+            const act = document.getElementById('note').value || "Act";
+            if(isNaN(pts)) return alert("Enter points");
+            await sb.from('lovebank').insert([{ act, points: pts, status: 'pending', user_type: currentUser }]);
+            document.getElementById('note').value = ''; document.getElementById('custom-pts').value = ''; loadData();
         }
 
-        async function addAct() {
-            const ptsVal = document.getElementById('custom-pts').value;
-            const pts = parseInt(ptsVal);
-            const act = document.getElementById('note').value || "Act";
-            if(isNaN(pts)) return alert("Please enter points!");
-            
-            const { error } = await sb.from('lovebank').insert([{ act, points: pts, status: 'pending', user_type: currentUser }]);
-            if(error) alert("Error: " + error.message);
-            
-            document.getElementById('note').value = ''; 
-            document.getElementById('custom-pts').value = ''; 
+        async function addRewardToList() {
+            const t = document.getElementById('rew-title').value;
+            const c = parseInt(document.getElementById('rew-cost').value);
+            const i = document.getElementById('rew-icon').value || '🎁';
+            if(!t || isNaN(c)) return alert("Required fields missing");
+            await sb.from('lovebank_rewards').insert([{ title: t, cost: c, icon: i }]);
             loadData();
         }
 
         async function approve(id) { await sb.from('lovebank').update({ status: 'approved' }).eq('id', id); loadData(); }
-        async function delAct(id) { if(confirm("Delete entry?")) { await sb.from('lovebank').delete().eq('id', id); loadData(); } }
-        async function delReward(id) { if(confirm("Permanently remove this reward?")) { await sb.from('lovebank_rewards').delete().eq('id', id); loadData(); } }
+        async function delAct(id) { if(confirm("Delete?")) { await sb.from('lovebank').delete().eq('id', id); loadData(); } }
+        async function delReward(id) { if(confirm("Delete?")) { await sb.from('lovebank_rewards').delete().eq('id', id); loadData(); } }
         async function redeem(t, c) {
-            const h = parseInt(document.getElementById('score-h').innerText);
-            const w = parseInt(document.getElementById('score-w').innerText);
-            const score = currentUser === 'Husband' ? h : w;
-            if(score < c) return alert("Not enough points!");
-            if(confirm(`Spend ${c} pts on ${t}?`)) {
+            const sH = parseInt(document.getElementById('score-h').innerText);
+            const sW = parseInt(document.getElementById('score-w').innerText);
+            const s = currentUser === 'Husband' ? sH : sW;
+            if(s < c) return alert("Not enough points");
+            if(confirm(`Redeem ${t}?`)) {
                 await sb.from('lovebank').insert([{ act: `REDEEMED: ${t}`, points: -c, status: 'approved', user_type: currentUser }]);
                 loadData();
             }
