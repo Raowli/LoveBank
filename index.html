@@ -29,7 +29,7 @@
         /* Startup Screen */
         #startup-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg); z-index: 1000;
+            background: var(--bg); z-index: 10000;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
@@ -51,31 +51,33 @@
         .score-val { font-size: 38px; font-weight: 800; display: block; }
         .score-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: #a4b0be; }
 
-        /* General UI */
         .card { background: white; padding: 24px; border-radius: 28px; box-shadow: 0 8px 24px rgba(0,0,0,0.03); margin-bottom: 20px; }
         .tabs { display: flex; background: var(--gray); border-radius: 20px; padding: 6px; margin-bottom: 25px; }
         .tab { flex: 1; text-align: center; padding: 12px; border-radius: 16px; cursor: pointer; font-weight: 700; font-size: 14px; color: #747d8c; }
         .tab.active { background: white; color: var(--primary); }
 
         input { width: 100%; padding: 16px; margin: 10px 0; border: 2px solid var(--gray); border-radius: 18px; font-size: 16px; outline: none; box-sizing: border-box; }
-        .submit-btn { width: 100%; padding: 18px; border-radius: 18px; border: none; background: var(--primary); color: white; font-weight: 800; font-size: 16px; box-shadow: 0 6px 20px rgba(255, 77, 109, 0.2); }
+        .submit-btn { width: 100%; padding: 18px; border-radius: 18px; border: none; background: var(--primary); color: white; font-weight: 800; font-size: 16px; box-shadow: 0 6px 20px rgba(255, 77, 109, 0.2); cursor: pointer; }
 
         .log-item { display: flex; justify-content: space-between; align-items: center; background: white; padding: 20px; border-radius: 22px; margin-bottom: 12px; border-left: 8px solid var(--gray); }
         .log-item.h { border-left-color: var(--husband); }
         .log-item.w { border-left-color: var(--wife); }
         
-        .hidden { display: none; }
-        .user-indicator { text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 10px; padding: 5px; border-radius: 10px; }
+        .hidden { display: none !important; }
+        .user-indicator { text-align: center; font-size: 12px; font-weight: 700; margin-bottom: 10px; padding: 10px; border-radius: 15px; }
         .user-indicator.h { background: #e3f2fd; color: var(--husband); }
         .user-indicator.w { background: #f3e5f5; color: var(--wife); }
+        
+        .approve-btn { background: var(--primary); color: white; border: none; padding: 8px 12px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="startup-overlay">
-        <h2 style="color: var(--primary); margin-bottom: 30px;">Who are you?</h2>
-        <button class="submit-btn" style="background: var(--husband); margin-bottom: 15px; width: 80%;" onclick="selectUser('Husband')">Husband</button>
-        <button class="submit-btn" style="background: var(--wife); width: 80%;" onclick="selectUser('Wife')">Wife</button>
+        <h2 style="color: var(--primary); margin-bottom: 30px; font-weight: 800;">Welcome to LoveBank</h2>
+        <p style="color: #a4b0be; margin-bottom: 20px; font-size: 14px;">Select your identity to continue</p>
+        <button class="submit-btn" style="background: var(--husband); margin-bottom: 15px; width: 80%;" onclick="selectUser('Husband')">I am the Husband</button>
+        <button class="submit-btn" style="background: var(--wife); width: 80%;" onclick="selectUser('Wife')">I am the Wife</button>
     </div>
 
     <div class="header-card">
@@ -124,22 +126,49 @@
     <script>
         const SUPABASE_URL = 'https://zqcevjiowfcghtcjnzex.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpxY2V2amlvd2ZjZ2h0Y2puemV4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc3ODY3MzAsImV4cCI6MjA4MzM2MjczMH0.mkUS7Q8JMhFtJGFZ0_ceK7bVLdYyX9uMbPr3SBIWxBo';
-        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
+        
+        let sb;
         let currentUser = null;
 
+        // Initialize Supabase immediately
+        try {
+            sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+            console.log("Supabase Client Ready");
+        } catch (e) {
+            alert("Error connecting to database. Please refresh.");
+        }
+
         function selectUser(role) {
+            console.log("User Selected:", role);
             currentUser = role;
-            document.getElementById('startup-overlay').classList.add('hidden');
+            
+            // Hide overlay
+            document.getElementById('startup-overlay').style.display = 'none';
+            
+            // Show indicator
             const tag = document.getElementById('current-user-tag');
             tag.innerText = "Logged in as: " + role;
             tag.className = "user-indicator " + (role === 'Husband' ? 'h' : 'w');
+            
+            // Start data sync
             loadData();
+            
+            // Set refresh interval
+            setInterval(() => { 
+                if(currentUser) loadData(); 
+            }, 5000);
         }
 
         async function loadData() {
-            const { data: acts } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
-            const { data: rewards } = await sb.from('lovebank_rewards').select('*').order('cost', { ascending: true });
+            if (!sb) return;
+            
+            const { data: acts, error: e1 } = await sb.from('lovebank').select('*').order('created_at', { ascending: false });
+            const { data: rewards, error: e2 } = await sb.from('lovebank_rewards').select('*').order('cost', { ascending: true });
+
+            if (e1 || e2) {
+                console.error("Fetch Error", e1, e2);
+                return;
+            }
 
             let hScore = 0, wScore = 0;
             let logsHtml = '';
@@ -162,38 +191,45 @@
                             ${item.status === 'pending' 
                                 ? `<button class="approve-btn" onclick="approve('${item.id}')">Confirm</button>` 
                                 : `<span style="font-weight:800; color:${item.points >= 0 ? '#2ecc71' : '#e74c3c'}">${item.points >= 0 ? '+' : ''}${item.points}</span>`}
-                            <span style="margin-left:15px; opacity:0.3" onclick="delAct('${item.id}')">✕</span>
+                            <span style="margin-left:15px; opacity:0.3; cursor:pointer" onclick="delAct('${item.id}')">✕</span>
                         </div>
                     </div>`;
             });
 
             document.getElementById('score-h').innerText = hScore;
             document.getElementById('score-w').innerText = wScore;
-            document.getElementById('logs').innerHTML = logsHtml;
+            document.getElementById('logs').innerHTML = logsHtml || '<div style="text-align:center; padding:20px; color:#a4b0be">No activity yet.</div>';
 
             let shopHtml = '';
             rewards.forEach(r => {
                 shopHtml += `
-                    <div class="card" style="display:flex; justify-content:space-between; align-items:center" onclick="redeem('${r.title}', ${r.cost})">
+                    <div class="card" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer" onclick="redeem('${r.title}', ${r.cost})">
                         <span>${r.icon} <b>${r.title}</b></span>
                         <span style="color:var(--primary); font-weight:800">${r.cost} pts</span>
                     </div>`;
             });
-            document.getElementById('reward-shop-list').innerHTML = shopHtml;
+            document.getElementById('reward-shop-list').innerHTML = shopHtml || '<div style="text-align:center; padding:20px; color:#a4b0be">No rewards added.</div>';
 
             let manageHtml = '';
             rewards.forEach(r => {
-                manageHtml += `<div class="card" style="font-size:13px; opacity:0.7">${r.icon} ${r.title} (${r.cost}) <span style="color:red; float:right" onclick="delReward('${r.id}')">DEL</span></div>`;
+                manageHtml += `<div class="card" style="font-size:13px; opacity:0.7">${r.icon} ${r.title} (${r.cost}) <span style="color:red; float:right; cursor:pointer" onclick="delReward('${r.id}')">DELETE</span></div>`;
             });
             document.getElementById('reward-edit-list').innerHTML = manageHtml;
         }
 
         async function addAct() {
-            const pts = parseInt(document.getElementById('custom-pts').value);
+            const ptsVal = document.getElementById('custom-pts').value;
+            const pts = parseInt(ptsVal);
             const act = document.getElementById('note').value || "Good Deed";
-            if(isNaN(pts)) return alert("Enter points!");
+            
+            if(isNaN(pts)) {
+                alert("Please enter a point value!");
+                return;
+            }
+            
             await sb.from('lovebank').insert([{ act, points: pts, status: 'pending', user_type: currentUser }]);
-            document.getElementById('note').value = ''; document.getElementById('custom-pts').value = ''; 
+            document.getElementById('note').value = ''; 
+            document.getElementById('custom-pts').value = ''; 
             loadData();
         }
 
@@ -201,18 +237,28 @@
             const title = document.getElementById('rew-title').value;
             const cost = parseInt(document.getElementById('rew-cost').value);
             const icon = document.getElementById('rew-icon').value || '🎁';
+            
+            if(!title || isNaN(cost)) return alert("Title and Cost are required!");
+            
             await sb.from('lovebank_rewards').insert([{ title, cost, icon }]);
-            document.getElementById('rew-title').value = ''; document.getElementById('rew-cost').value = ''; 
+            document.getElementById('rew-title').value = ''; 
+            document.getElementById('rew-cost').value = ''; 
+            document.getElementById('rew-icon').value = '';
             loadData();
         }
 
         async function approve(id) { await sb.from('lovebank').update({ status: 'approved' }).eq('id', id); loadData(); }
-        async function delAct(id) { if(confirm("Delete?")) { await sb.from('lovebank').delete().eq('id', id); loadData(); } }
-        async function delReward(id) { if(confirm("Delete?")) { await sb.from('lovebank_rewards').delete().eq('id', id); loadData(); } }
+        async function delAct(id) { if(confirm("Permanently delete this entry?")) { await sb.from('lovebank').delete().eq('id', id); loadData(); } }
+        async function delReward(id) { if(confirm("Delete this reward from the shop?")) { await sb.from('lovebank_rewards').delete().eq('id', id); loadData(); } }
+        
         async function redeem(title, cost) {
-            const myScore = currentUser === 'Husband' ? parseInt(document.getElementById('score-h').innerText) : parseInt(document.getElementById('score-w').innerText);
-            if (myScore < cost) return alert("Not enough points!");
-            if (confirm(`Redeem ${title}?`)) {
+            const scoreH = parseInt(document.getElementById('score-h').innerText);
+            const scoreW = parseInt(document.getElementById('score-w').innerText);
+            const myScore = currentUser === 'Husband' ? scoreH : scoreW;
+            
+            if (myScore < cost) return alert("You don't have enough points for this yet!");
+            
+            if (confirm(`Spend ${cost} points on ${title}?`)) {
                 await sb.from('lovebank').insert([{ act: `REDEEMED: ${title}`, points: -cost, status: 'approved', user_type: currentUser }]);
                 loadData();
             }
@@ -224,8 +270,6 @@
             ['t-acts','t-shop','t-list'].forEach(id => document.getElementById(id).classList.remove('active'));
             document.getElementById('t-'+v).classList.add('active');
         }
-
-        setInterval(() => { if(currentUser) loadData(); }, 5000);
     </script>
 </body>
 </html>
